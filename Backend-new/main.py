@@ -73,14 +73,26 @@ def transcribe_and_translate_audio(audio_content: bytes) -> dict:
     return {"text_english": text_transcribed}
 # -----------------------------------------------------------
 
+# --- MODIFICATION 1: Serve upload.html from the root ("/") ---
 @app.get("/", response_class=HTMLResponse)
-async def serve_index_html():
-    """Reads and serves the index.html file."""
-    index_file_path = ABSOLUTE_FRONTEND_PATH / "index.html"
-    if not index_file_path.exists():
+async def serve_upload_page():
+    """Reads and serves the upload.html file as the root page."""
+    upload_file_path = ABSOLUTE_FRONTEND_PATH / "upload.html"
+    if not upload_file_path.exists():
+        return HTMLResponse(status_code=404, content="<h1>404 Not Found</h1><p>upload.html not found at the configured path.</p>")
+    
+    with open(upload_file_path, 'r', encoding='utf-8') as f:
+        return HTMLResponse(content=f.read())
+
+# --- MODIFICATION 2: Serve the chat page from "/chat" ---
+@app.get("/chat", response_class=HTMLResponse)
+async def serve_chat_page():
+    """Reads and serves the index.html (chat) file."""
+    chat_file_path = ABSOLUTE_FRONTEND_PATH / "index.html"
+    if not chat_file_path.exists():
         return HTMLResponse(status_code=404, content="<h1>404 Not Found</h1><p>index.html not found at the configured path.</p>")
     
-    with open(index_file_path, 'r', encoding='utf-8') as f:
+    with open(chat_file_path, 'r', encoding='utf-8') as f:
         return HTMLResponse(content=f.read())
 
 

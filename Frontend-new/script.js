@@ -3,11 +3,11 @@ const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const voiceBtn = document.getElementById('voice-btn');
 const attachmentBtn = document.getElementById('attachment-btn');
-const fileInputHidden = document.createElement('input'); 
+const fileInputHidden = document.createElement('input');
 fileInputHidden.type = 'file';
-fileInputHidden.accept = '.pdf'; 
+fileInputHidden.accept = '.pdf';
 fileInputHidden.style.display = 'none';
-document.body.appendChild(fileInputHidden); 
+document.body.appendChild(fileInputHidden);
 const suggestBtn = document.getElementById('suggest-btn');
 
 const userMessageTemplate = document.getElementById('user-message-template');
@@ -30,12 +30,12 @@ const uploadAudioForTranscription = async (audioBlob) => {
     const uploadStatus = displayMessage(botMessageTemplate, `**🎙️ Transcribing Audio...**`);
 
     const formData = new FormData();
-    formData.append("audio_file", audioBlob, "user_recording.webm"); 
+    formData.append("audio_file", audioBlob, "user_recording.webm");
 
     try {
-        const response = await fetch('/transcribe-audio/', { 
+        const response = await fetch('/transcribe-audio/', {
             method: 'POST',
-            body: formData 
+            body: formData
         });
 
         chatContainer.removeChild(uploadStatus);
@@ -51,13 +51,13 @@ const uploadAudioForTranscription = async (audioBlob) => {
         const transcribedText = data.text_english;
 
         if (!transcribedText) {
-             displayMessage(botMessageTemplate, `**⚠️ Transcription issue:** Received an empty response from the server.`);
-             return;
+            displayMessage(botMessageTemplate, `**⚠️ Transcription issue:** Received an empty response from the server.`);
+            return;
         }
 
         // 2. Display success and populate the message input(for debugging)
         //displayMessage(botMessageTemplate, `**✅ Audio Transcribed!**`);
-        
+
         messageInput.value = transcribedText;
 
     } catch (error) {
@@ -71,14 +71,14 @@ const uploadAudioForTranscription = async (audioBlob) => {
 const uploadFileToBackend = async (file) => {
     // 1. Display a status message
     const uploadStatus = displayMessage(botMessageTemplate, `**Uploading File:** ${file.name} (Type: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
-        
+
     const formData = new FormData();
-    formData.append("file", file); 
+    formData.append("file", file);
 
     try {
         const response = await fetch('/upload-pdf/', {
             method: 'POST',
-            body: formData 
+            body: formData
         });
 
         chatContainer.removeChild(uploadStatus);
@@ -95,7 +95,7 @@ const uploadFileToBackend = async (file) => {
         //const successMessage = `**File Uploaded Successfully!**\nFilename: ${data.filename}\nPath: ${data.path}`;
         const successMessage = `**File Uploaded Successfully!`;
         displayMessage(botMessageTemplate, successMessage);
-    
+
     } catch (error) {
         chatContainer.removeChild(uploadStatus);
         displayMessage(botMessageTemplate, `**⚠️ Network Error:** Could not connect to the upload server. ${error.message}`);
@@ -103,54 +103,54 @@ const uploadFileToBackend = async (file) => {
     }
 };
 
-        // --- Gemini API Call with Exponential Backoff ---
-        const callGeminiAPI = async (prompt, retries = 3, delay = 1000) => {
-            const apiKey = ""; // Canvas will provide this. 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+// --- Gemini API Call with Exponential Backoff ---
+const callGeminiAPI = async (prompt, retries = 3, delay = 1000) => {
+    const apiKey = ""; // Canvas will provide this. 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-            // Add user prompt to a temporary history for the API call
-            const currentChatHistory = [...chatHistory, { role: "user", parts: [{ text: prompt }] }];
+    // Add user prompt to a temporary history for the API call
+    const currentChatHistory = [...chatHistory, { role: "user", parts: [{ text: prompt }] }];
 
-            const payload = {
-                contents: currentChatHistory
-            };
+    const payload = {
+        contents: currentChatHistory
+    };
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-                if (!response.ok) {
-                    if (response.status === 429 && retries > 0) {
-                        // Throttled, retry with backoff
-                        await new Promise(res => setTimeout(res, delay));
-                        return callGeminiAPI(prompt, retries - 1, delay * 2);
-                    }
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-                
-                const result = await response.json();
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    // Add both user and model messages to the persistent history
-                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                    chatHistory.push({ role: "model", parts: [{ text: text }] });
-                    return text;
-                } else {
-                    return "Sorry, I couldn't generate a response. Please try again.";
-                }
-
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                 if (retries > 0) {
-                    await new Promise(res => setTimeout(res, delay));
-                    return callGeminiAPI(prompt, retries - 1, delay * 2);
-                }
-                return "Sorry, there was an error connecting to the AI. Please check the console for details.";
+        if (!response.ok) {
+            if (response.status === 429 && retries > 0) {
+                // Throttled, retry with backoff
+                await new Promise(res => setTimeout(res, delay));
+                return callGeminiAPI(prompt, retries - 1, delay * 2);
             }
-        };
+            throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+            // Add both user and model messages to the persistent history
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            chatHistory.push({ role: "model", parts: [{ text: text }] });
+            return text;
+        } else {
+            return "Sorry, I couldn't generate a response. Please try again.";
+        }
+
+    } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        if (retries > 0) {
+            await new Promise(res => setTimeout(res, delay));
+            return callGeminiAPI(prompt, retries - 1, delay * 2);
+        }
+        return "Sorry, there was an error connecting to the AI. Please check the console for details.";
+    }
+};
 
 
 const displayMessage = (template, text) => {
@@ -158,7 +158,7 @@ const displayMessage = (template, text) => {
     messageNode.removeAttribute('id');
     messageNode.classList.remove('hidden');
     if (text) {
-         messageNode.querySelector('p').textContent = text;
+        messageNode.querySelector('p').textContent = text;
     }
     chatContainer.appendChild(messageNode);
     chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -171,18 +171,18 @@ const sendMessage = async () => {
 
     displayMessage(userMessageTemplate, messageText);
     messageInput.value = '';
-    
+
     const typingIndicator = displayMessage(typingIndicatorTemplate);
-    
+
     const botResponseText = await callGeminiAPI(messageText);
-    
+
     chatContainer.removeChild(typingIndicator);
     displayMessage(botMessageTemplate, botResponseText);
 };
 
 const suggestReplies = async () => {
     const lastMessage = chatHistory[chatHistory.length - 1]?.parts[0]?.text;
-    if(!lastMessage) {
+    if (!lastMessage) {
         displayMessage(botMessageTemplate, "There's no message to reply to!");
         return;
     }
@@ -192,7 +192,7 @@ const suggestReplies = async () => {
     const typingIndicator = displayMessage(typingIndicatorTemplate);
 
     const suggestionsResponse = await callGeminiAPI(prompt);
-    
+
     chatContainer.removeChild(typingIndicator);
     displayMessage(botMessageTemplate, `Here are some suggested replies:\n\n${suggestionsResponse}`);
 }
@@ -201,10 +201,10 @@ const suggestReplies = async () => {
 voiceBtn.addEventListener('click', async () => {
     if (isRecording) {
         // STOP Recording
-        voiceBtn.style.color = ''; 
-        voiceBtn.innerHTML = '🎤'; 
+        voiceBtn.style.color = '';
+        voiceBtn.innerHTML = '🎤';
         isRecording = false;
-        
+
         if (mediaRecorder) {
             mediaRecorder.stop();
         }
@@ -213,8 +213,8 @@ voiceBtn.addEventListener('click', async () => {
         // START Recording
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' }); 
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
             audioChunks = [];
 
             mediaRecorder.ondataavailable = (event) => {
@@ -222,17 +222,17 @@ voiceBtn.addEventListener('click', async () => {
             };
 
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); 
-                stream.getTracks().forEach(track => track.stop()); 
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                stream.getTracks().forEach(track => track.stop());
                 uploadAudioForTranscription(audioBlob);
             };
 
             // Start recording
             mediaRecorder.start();
-            voiceBtn.style.color = 'red'; 
-            voiceBtn.innerHTML = '🔴'; 
+            voiceBtn.style.color = 'red';
+            voiceBtn.innerHTML = '🔴';
             isRecording = true;
-            
+
             // --- MODIFICATION ---
             // Updated the prompt for English-only
             displayMessage(botMessageTemplate, "🔴 **Recording...** Click the voice button again to stop. Please speak clearly in English.");
@@ -259,7 +259,7 @@ messageInput.addEventListener('keydown', (event) => {
 // --- Attachment Button Logic ---
 attachmentBtn.addEventListener('click', () => {
     fileInputHidden.value = null;
-    fileInputHidden.click(); 
+    fileInputHidden.click();
 });
 
 fileInputHidden.addEventListener('change', (event) => {
