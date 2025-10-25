@@ -4,25 +4,33 @@ from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import uuid
 import time
+import sys # Added to read command-line arguments
 
-# --- 1. Configuration ---
+# --- 1. Configuration (now from command-line) ---
 
-# Embedding Model Configuration
-MODEL_NAME = "BAAI/bge-large-en-v1.5"
+if len(sys.argv) < 3:
+    print("Error: Missing arguments.")
+    print("Usage: python Emmbed.py <path_to_markdown_file> <collection_name>")
+    sys.exit(1)
 
 # Data Configuration
-MARKDOWN_FILE = "2501.17887v1/2501.17887v1.md"  # The path to your markdown file
-CHUNK_SIZE = 512       # Max tokens for the BGE model
+MARKDOWN_FILE = sys.argv[1] # The path to your markdown file
+CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
 
 # ChromaDB Configuration
 CHROMA_PATH = "./chroma_db"  # Directory to store the persistent database
-COLLECTION_NAME = "markdown_docs"
+COLLECTION_NAME = sys.argv[2] # A dynamic collection name (e.g., the file stem)
+
+# Embedding Model Configuration
+MODEL_NAME = "BAAI/bge-large-en-v1.5"
+# -----------------------------------------------
+
 
 # --- 2. Load Embedding Model ---
 print(f"Loading embedding model: {MODEL_NAME}...")
 # Use 'cuda' if you have a GPU, otherwise 'cpu'
-model = SentenceTransformer(MODEL_NAME, device='cuda')
+model = SentenceTransformer(MODEL_NAME, device='cpu')
 print("Model loaded.")
 
 # --- 3. Load, Chunk, and Prepare Document ---
@@ -74,7 +82,8 @@ collection.add(
 
 print("Data insertion complete.")
 
-# --- 6. Test Query ---
+# --- 6. Test Query (Optional) ---
+# This part will still run to verify the insertion
 print("\n--- Verification Search ---")
 query_text = "What is a vector database?"
 print(f"Query: '{query_text}'")
@@ -95,9 +104,12 @@ search_results = collection.query(
 
 # Print results
 print("Search Results:")
-for i, (doc, dist) in enumerate(zip(search_results['documents'][0], search_results['distances'][0])):
-    print(f"\nResult {i+1}:")
-    print(f"  Distance: {dist:.4f}")
-    print(f"  Text: {doc[:150]}...")
+if search_results['documents']:
+    for i, (doc, dist) in enumerate(zip(search_results['documents'][0], search_results['distances'][0])):
+        print(f"\nResult {i+1}:")
+        print(f"  Distance: {dist:.4f}")
+        print(f"  Text: {doc[:150]}...")
+else:
+    print("No results found for verification query.")
 
-print("\nDone.")
+print(f"\nDone processing for collection: {COLLECTION_NAME}.")

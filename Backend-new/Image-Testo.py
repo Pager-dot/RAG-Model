@@ -1,12 +1,20 @@
 import re
 from ollama import chat, ChatResponse
 import os
+import sys # Added to read command-line arguments
 
-# --- Configuration ---
-README_FILE = '2501.17887v1/2501.17887v1.md'  # The file to read and modify
-OUTPUT_FILE = 'README_modified.md' # The file to save the result
+# --- Configuration (now from command-line) ---
+if len(sys.argv) < 4:
+    print("Error: Missing arguments.")
+    print("Usage: python Image-Testo.py <input_md_file> <image_directory> <output_md_file>")
+    sys.exit(1)
+
+README_FILE = sys.argv[1]     # The file to read and modify
+IMAGE_DIRECTORY = sys.argv[2] # The directory where images are stored
+OUTPUT_FILE = sys.argv[3]     # The file to save the result
+# -----------------------------------------------
+
 MODEL_NAME = 'qwen3-vl:235b-cloud' 
-IMAGE_DIRECTORY = '2501.17887v1/' # <<< The new, crucial piece of information
 PROMPT = 'Describe the content of this image concisely and precisely, focusing on any numerical data present. If no numerical data is present, simply describe the image.'
 # ---------------------
 
