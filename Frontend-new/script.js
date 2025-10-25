@@ -2,13 +2,6 @@ const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const voiceBtn = document.getElementById('voice-btn');
-const attachmentBtn = document.getElementById('attachment-btn');
-const fileInputHidden = document.createElement('input');
-fileInputHidden.type = 'file';
-fileInputHidden.accept = '.pdf';
-fileInputHidden.style.display = 'none';
-document.body.appendChild(fileInputHidden);
-const suggestBtn = document.getElementById('suggest-btn');
 
 const userMessageTemplate = document.getElementById('user-message-template');
 const botMessageTemplate = document.getElementById('bot-message-template');
@@ -36,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     }
 });
-
 
 // --- Voice Recording State and Objects ---
 let mediaRecorder;
@@ -78,46 +70,6 @@ const uploadAudioForTranscription = async (audioBlob) => {
     }
 };
 
-// --- uploadFileToBackend (for the paperclip button) ---
-const uploadFileToBackend = async (file) => {
-    const uploadStatus = displayMessage(botMessageTemplate, `**Uploading File:** ${file.name}...`);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-        const response = await fetch('/upload-pdf/', {
-            method: 'POST',
-            body: formData
-        });
-
-        chatContainer.removeChild(uploadStatus);
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Upload failed due to a server error.');
-        }
-
-        const data = await response.json();
-        
-        // Update session storage and global vars
-        currentCollectionName = data.collection_name; 
-        currentFileName = data.filename;
-        sessionStorage.setItem('activeCollectionName', currentCollectionName);
-        sessionStorage.setItem('activeFileName', currentFileName);
-        
-        const successMessage = `**File Ready!** You are now chatting with \`${data.filename}\`. Ask me anything about it.`;
-        displayMessage(botMessageTemplate, successMessage);
-        
-        chatHistory.push({ role: "user", parts: [{ text: `I have just uploaded ${data.filename}.` }] });
-        chatHistory.push({ role: "model", parts: [{ text: `Great! I'm ready to answer questions about ${data.filename}.` }] });
-
-    } catch (error) {
-        chatContainer.removeChild(uploadStatus);
-        displayMessage(botMessageTemplate, `**Upload Failed:** ${error.message}`);
-        console.error('Upload Error:', error);
-    }
-};
-
 // --- Function to call your RAG backend (gpt-oss) ---
 const callRAGBackend = async (prompt) => {
     try {
@@ -152,14 +104,6 @@ const callRAGBackend = async (prompt) => {
         return `Sorry, there was an error connecting to the document AI: ${error.message}`;
     }
 };
-
-
-// --- Gemini API Call (Safely disabled) ---
-const callGeminiAPI = async (prompt, retries = 3, delay = 1000) => {
-    console.error("callGeminiAPI was called, but it should be disabled.");
-    return "Error: General AI is disabled. Please upload a PDF.";
-};
-
 
 // --- Utility function to display messages ---
 const displayMessage = (template, text) => {
@@ -215,12 +159,6 @@ const sendMessage = async () => {
     // --- END THE FIX ---
 };
 
-// --- suggestReplies (Safely disabled) ---
-const suggestReplies = async () => {
-    displayMessage(botMessageTemplate, "Suggestions are only available for the general AI, which is disabled. Please chat with your PDF.");
-    return;
-}
-
 // --- Voice Button Event Listener ---
 voiceBtn.addEventListener('click', async () => {
     if (isRecording) {
@@ -256,27 +194,10 @@ voiceBtn.addEventListener('click', async () => {
 
 // --- Final Event Listeners ---
 sendBtn.addEventListener('click', sendMessage);
-suggestBtn.addEventListener('click', suggestReplies);
 
 messageInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
         event.preventDefault();
         sendMessage();
-    }
-});
-
-attachmentBtn.addEventListener('click', () => {
-    fileInputHidden.value = null;
-    fileInputHidden.click();
-});
-
-fileInputHidden.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        if (file.name.toLowerCase().endsWith(".pdf")) {
-            uploadFileToBackend(file);
-        } else {
-            displayMessage(botMessageTemplate, "**Invalid File:** Please select a PDF file.");
-        }
     }
 });
