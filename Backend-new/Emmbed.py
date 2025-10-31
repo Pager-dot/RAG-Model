@@ -4,7 +4,8 @@ from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import uuid
 import time
-import sys # Added to read command-line arguments
+import sys
+import torch
 
 # --- 1. Configuration (now from command-line) ---
 
@@ -30,7 +31,7 @@ MODEL_NAME = "BAAI/bge-large-en-v1.5"
 # --- 2. Load Embedding Model ---
 print(f"Loading embedding model: {MODEL_NAME}...")
 # Use 'cuda' if you have a GPU, otherwise 'cpu'
-model = SentenceTransformer(MODEL_NAME, device='cpu')
+model = SentenceTransformer(MODEL_NAME, device= "cuda" if torch.cuda.is_available() else "cpu")
 print("Model loaded.")
 
 # --- 3. Load, Chunk, and Prepare Document ---
